@@ -20,9 +20,12 @@ import {
   Button,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function Gallery() {
+  const navigate = useNavigate();
   const [cards, setCards] = useState([]);
   const [designs, setDesigns] = useState([]);
   const [filter, setFilter] = useState('all');
@@ -69,6 +72,10 @@ function Gallery() {
       console.error('Error deleting card:', error);
       alert('Error deleting card. Please try again.');
     }
+  };
+
+  const handleEditClick = (card) => {
+    navigate(`/edit-card/${card._id}`);
   };
 
   const filteredCards = cards.filter((card) => {
@@ -121,21 +128,30 @@ function Gallery() {
             <Grid item xs={12} sm={6} md={4} key={card._id}>
               <Card sx={getCardStyle(card.cardDesign)}>
                 <Box sx={{ position: 'relative' }}>
-                  <IconButton
-                    sx={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      zIndex: 1,
-                      bgcolor: 'rgba(255,255,255,0.8)',
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.9)',
-                      },
-                    }}
-                    onClick={() => handleDeleteClick(card)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    top: 8, 
+                    right: 8, 
+                    zIndex: 1,
+                    display: 'flex',
+                    gap: 1,
+                    bgcolor: 'rgba(255,255,255,0.8)',
+                    borderRadius: '4px',
+                    p: 0.5
+                  }}>
+                    <IconButton
+                      onClick={() => handleEditClick(card)}
+                      size="small"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => handleDeleteClick(card)}
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
                   {card.image && (
                     <CardMedia
                       component="img"

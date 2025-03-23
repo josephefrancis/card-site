@@ -261,6 +261,34 @@ app.delete('/api/cards/:id', async (req, res) => {
   }
 });
 
+// Update a card
+app.put('/api/cards/:id', upload.single('image'), async (req, res) => {
+  try {
+    const cardId = req.params.id;
+    const updateData = { ...req.body };
+    
+    // If a new image is uploaded, update the image field
+    if (req.file) {
+      updateData.image = req.file.filename;
+    }
+
+    const updatedCard = await Card.findByIdAndUpdate(
+      cardId,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedCard) {
+      return res.status(404).json({ message: 'Card not found' });
+    }
+
+    res.json(updatedCard);
+  } catch (error) {
+    console.error('Error updating card:', error);
+    res.status(500).json({ message: 'Error updating card' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 }); 

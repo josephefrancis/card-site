@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import CreateCard from './components/CreateCard';
 import Gallery from './components/Gallery';
 import DesignEditor from './components/DesignEditor';
+import EditCard from './components/EditCard';
 
 const theme = createTheme({
   palette: {
@@ -27,8 +28,9 @@ function App() {
         <div className="App">
           <Navbar />
           <Routes>
-            <Route path="/" element={<CreateCard />} />
-            <Route path="/gallery" element={<Gallery />} />
+            <Route path="/" element={<Gallery />} />
+            <Route path="/create" element={<CreateCard />} />
+            <Route path="/edit-card/:id" element={<EditCard />} />
             <Route path="/design-editor" element={<DesignEditor />} />
           </Routes>
         </div>
