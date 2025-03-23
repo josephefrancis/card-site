@@ -42,61 +42,58 @@ function EditCard() {
       navigate('/gallery');
       return;
     }
-    fetchCard();
-    fetchDesigns();
+    const loadData = async () => {
+      try {
+        const [designsResponse, cardResponse] = await Promise.all([
+          axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`),
+          axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`)
+        ]);
+
+        const card = cardResponse.data;
+        console.log('Fetched card data:', card);
+
+        // Set form data with proper type conversion for numbers
+        const formDataToSet = {
+          name: card.name || '',
+          type: card.type || '',
+          hp: card.hp?.toString() || '',
+          attack: card.attack?.toString() || '',
+          defense: card.defense?.toString() || '',
+          specialAttack: card.specialAttack?.toString() || '',
+          specialDefense: card.specialDefense?.toString() || '',
+          speed: card.speed?.toString() || '',
+          cardDesign: card.cardDesign?._id || '',
+          image: null,
+        };
+        console.log('Setting form data:', formDataToSet);
+        setFormData(formDataToSet);
+
+        // Set current image and preview if image exists
+        if (card.image) {
+          setCurrentImage(card.image);
+          const imageUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`;
+          console.log('Setting image preview:', imageUrl);
+          setPreview(imageUrl);
+        }
+
+        // Set selected design if it exists
+        if (card.cardDesign) {
+          console.log('Setting selected design:', card.cardDesign);
+          setSelectedDesign(card.cardDesign);
+        }
+
+        // Set designs
+        console.log('Fetched designs:', designsResponse.data);
+        setDesigns(designsResponse.data);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        alert('Error loading card details. Please try again.');
+        navigate('/gallery');
+      }
+    };
+
+    loadData();
   }, [id]);
-
-  const fetchCard = async () => {
-    try {
-      console.log('Fetching card with ID:', id);
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`);
-      const card = response.data;
-      console.log('Fetched card data:', card);
-
-      // Set form data with proper type conversion for numbers
-      const formDataToSet = {
-        name: card.name || '',
-        type: card.type || '',
-        hp: card.hp?.toString() || '',
-        attack: card.attack?.toString() || '',
-        defense: card.defense?.toString() || '',
-        specialAttack: card.specialAttack?.toString() || '',
-        specialDefense: card.specialDefense?.toString() || '',
-        speed: card.speed?.toString() || '',
-        cardDesign: card.cardDesign?._id || '',
-        image: null,
-      };
-      console.log('Setting form data:', formDataToSet);
-      setFormData(formDataToSet);
-
-      // Set current image and preview if image exists
-      if (card.image) {
-        setCurrentImage(card.image);
-        const imageUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`;
-        console.log('Setting image preview:', imageUrl);
-        setPreview(imageUrl);
-      }
-
-      // Set selected design if it exists
-      if (card.cardDesign) {
-        console.log('Setting selected design:', card.cardDesign);
-        setSelectedDesign(card.cardDesign);
-      }
-    } catch (error) {
-      console.error('Error fetching card:', error);
-      alert('Error fetching card details. Please try again.');
-      navigate('/gallery');
-    }
-  };
-
-  const fetchDesigns = async () => {
-    try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
-      setDesigns(response.data);
-    } catch (error) {
-      console.error('Error fetching designs:', error);
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
