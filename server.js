@@ -21,8 +21,12 @@ app.use(cors({
 
 // Add logging middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  console.log('Request headers:', req.headers);
+  console.log('----------------------------------------');
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Request query:', JSON.stringify(req.query, null, 2));
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('----------------------------------------');
   next();
 });
 
@@ -210,9 +214,10 @@ app.get('/api/cards', async (req, res) => {
 // Get a single card by ID
 app.get('/api/cards/:id', async (req, res) => {
   try {
+    console.log('----------------------------------------');
     console.log('Fetching card with ID:', req.params.id);
-    console.log('Request headers:', req.headers);
-    console.log('Request query:', req.query);
+    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Request query:', JSON.stringify(req.query, null, 2));
     
     const card = await Card.findById(req.params.id)
       .populate({
@@ -232,6 +237,7 @@ app.get('/api/cards/:id', async (req, res) => {
     res.header('Access-Control-Allow-Origin', req.headers.origin);
     res.header('Access-Control-Allow-Credentials', 'true');
     res.json(card);
+    console.log('----------------------------------------');
   } catch (error) {
     console.error('Error fetching card:', error);
     console.error('Error stack:', error.stack);

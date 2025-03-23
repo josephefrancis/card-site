@@ -57,6 +57,7 @@ function EditCard() {
         // Add error handling for the request
         let cardRes;
         try {
+          console.log('Sending GET request to:', cardUrl);
           cardRes = await axios.get(cardUrl);
           console.log('API Response received:', cardRes);
         } catch (requestError) {
@@ -96,6 +97,7 @@ function EditCard() {
         
         let designsRes;
         try {
+          console.log('Sending GET request to:', designsUrl);
           designsRes = await axios.get(designsUrl);
           console.log('Designs API Response received:', designsRes);
         } catch (designsError) {
