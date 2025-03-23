@@ -15,6 +15,13 @@ import {
   Select,
   MenuItem,
   FormControl,
+  ColorPicker,
+  Card,
+  CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { SketchPicker } from 'react-color';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -58,6 +65,10 @@ function DesignEditor() {
     }
   });
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [designToDelete, setDesignToDelete] = useState(null);
+  const [error, setError] = useState(null);
+
   useEffect(() => {
     fetchDesigns();
   }, []);
@@ -65,9 +76,10 @@ function DesignEditor() {
   const fetchDesigns = async () => {
     try {
       const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
-      setDesigns(response.data);
+      setDesigns(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching designs:', error);
+      setError('Failed to load designs');
     }
   };
 
@@ -117,6 +129,7 @@ function DesignEditor() {
     } catch (error) {
       console.error('Error saving design:', error);
       console.error('Error details:', error.response?.data || error.message);
+      setError('Failed to save design');
     }
   };
 
@@ -126,6 +139,7 @@ function DesignEditor() {
       fetchDesigns();
     } catch (error) {
       console.error('Error deleting design:', error);
+      setError('Failed to delete design');
     }
   };
 
@@ -167,6 +181,65 @@ function DesignEditor() {
     padding: '20px',
     margin: '20px 0',
   });
+
+  const handleDeleteClick = (design) => {
+    setDesignToDelete(design);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await handleDelete(designToDelete._id);
+      setDeleteDialogOpen(false);
+      setDesignToDelete(null);
+    } catch (error) {
+      console.error('Error deleting design:', error);
+      setError('Failed to delete design');
+    }
+  };
+
+  const handleEditDesign = (design) => {
+    setSelectedDesign(design);
+    setFormData(design);
+  };
+
+  const getCardStyle = (design) => {
+    if (!design) return {};
+    return {
+      background: design.styles.background,
+      border: `${design.styles.borderWidth}px ${design.styles.borderStyle} ${design.styles.borderColor}`,
+      borderRadius: `${design.styles.borderRadius}px`,
+      color: design.styles.textColor,
+      boxShadow: `0 0 ${design.styles.shadowBlur}px ${design.styles.shadowColor}`,
+      '& .MuiCardMedia-root': {
+        borderTopLeftRadius: `${design.styles.borderRadius}px`,
+        borderTopRightRadius: `${design.styles.borderRadius}px`,
+      },
+      '& .card-title': {
+        color: design.styles.titleColor,
+        fontWeight: design.styles.titleFontWeight,
+        textAlign: design.styles.titleAlignment,
+        fontSize: design.styles.titleSize,
+      },
+      '& .card-text': {
+        fontWeight: design.styles.textFontWeight,
+        fontSize: design.styles.textSize,
+      },
+      '& .stats-container': {
+        backgroundColor: design.styles.statsBgColor,
+      },
+    };
+  };
+
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Paper elevation={3} sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="error">{error}</Typography>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -443,15 +516,14 @@ function DesignEditor() {
                     <Box>
                       <Button
                         onClick={() => {
-                          setSelectedDesign(design);
-                          setFormData(design);
+                          handleEditDesign(design);
                         }}
                       >
                         Edit
                       </Button>
                       <IconButton
                         color="error"
-                        onClick={() => handleDelete(design._id)}
+                        onClick={() => handleDeleteClick(design)}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -463,6 +535,17 @@ function DesignEditor() {
           </Paper>
         </Grid>
       </Grid>
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Design</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this design?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error">Delete</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

@@ -21,6 +21,7 @@ app.use(express.json());
 // MongoDB Connection
 const mongoURI = process.env.MONGODB_URI;
 let gfs;
+let gridfsBucket;
 
 mongoose.connect(mongoURI)
   .then(() => {
@@ -28,6 +29,9 @@ mongoose.connect(mongoURI)
     
     // Initialize GridFS
     const conn = mongoose.connection;
+    gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
+      bucketName: 'uploads'
+    });
     gfs = Grid(conn.db, mongoose.mongo);
     gfs.collection('uploads');
   })
@@ -137,9 +141,9 @@ app.get('/api/files/:filename', async (req, res) => {
     if (!file) {
       return res.status(404).json({ message: 'File not found' });
     }
-    const readStream = gfs.createReadStream(file.filename);
+    const downloadStream = gridfsBucket.openDownloadStream(file._id);
     res.set('Content-Type', file.contentType);
-    readStream.pipe(res);
+    downloadStream.pipe(res);
   } catch (error) {
     console.error('Error serving file:', error);
     res.status(500).json({ message: 'Error serving file' });
