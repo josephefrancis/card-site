@@ -4,7 +4,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const multerGridfsStorage = require('multer-gridfs-storage');
+const { GridFsStorage } = require('multer-gridfs-storage');
 const Grid = require('gridfs-stream');
 require('dotenv').config();
 
@@ -36,7 +36,7 @@ mongoose.connect(mongoURI)
   });
 
 // Configure multer for GridFS storage
-const storage = multerGridfsStorage({
+const storage = new GridFsStorage({
   url: mongoURI,
   options: { useNewUrlParser: true, useUnifiedTopology: true },
   file: (req, file) => {
