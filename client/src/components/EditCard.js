@@ -36,14 +36,22 @@ function EditCard() {
   const [currentImage, setCurrentImage] = useState(null);
 
   useEffect(() => {
+    console.log('EditCard mounted with ID:', id);
+    if (!id) {
+      console.error('No card ID provided in route');
+      navigate('/gallery');
+      return;
+    }
     fetchCard();
     fetchDesigns();
   }, [id]);
 
   const fetchCard = async () => {
     try {
+      console.log('Fetching card with ID:', id);
       const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`);
       const card = response.data;
+      console.log('Fetched card data:', card);
       setFormData({
         name: card.name,
         type: card.type,

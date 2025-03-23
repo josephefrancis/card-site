@@ -41,6 +41,7 @@ function Gallery() {
           axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`)
         ]);
 
+        console.log('Fetched cards:', cardsResponse.data);
         setCards(Array.isArray(cardsResponse.data) ? cardsResponse.data : []);
         setDesigns(Array.isArray(designsResponse.data) ? designsResponse.data : []);
       } catch (error) {
@@ -69,8 +70,13 @@ function Gallery() {
     }
   };
 
-  const handleEditClick = (card) => {
-    navigate(`/edit-card/${card._id}`);
+  const handleEditClick = (cardId) => {
+    console.log('Editing card with ID:', cardId);
+    if (!cardId) {
+      console.error('No card ID provided for editing');
+      return;
+    }
+    navigate(`/edit-card/${cardId}`);
   };
 
   const filteredCards = cards.filter((card) => {
@@ -178,7 +184,10 @@ function Gallery() {
                     </Grid>
                   </Box>
                   <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                    <IconButton onClick={() => handleEditClick(card._id)} color="primary">
+                    <IconButton onClick={() => {
+                      console.log('Edit button clicked for card:', card);
+                      handleEditClick(card._id);
+                    }} color="primary">
                       <EditIcon />
                     </IconButton>
                     <IconButton onClick={() => handleDeleteClick(card)} color="error">
