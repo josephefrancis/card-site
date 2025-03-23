@@ -36,7 +36,7 @@ function Gallery() {
 
   const fetchCards = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/cards');
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards`);
       setCards(response.data);
     } catch (error) {
       console.error('Error fetching cards:', error);
@@ -45,7 +45,7 @@ function Gallery() {
 
   const fetchDesigns = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/card-designs');
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
       setDesigns(response.data);
     } catch (error) {
       console.error('Error fetching designs:', error);
@@ -61,7 +61,7 @@ function Gallery() {
     if (!cardToDelete) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/cards/${cardToDelete._id}`);
+      await axios.delete(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${cardToDelete._id}`);
       setCards(cards.filter(card => card._id !== cardToDelete._id));
       setDeleteDialogOpen(false);
       setCardToDelete(null);
@@ -140,7 +140,7 @@ function Gallery() {
                     <CardMedia
                       component="img"
                       height="200"
-                      image={`http://localhost:5000${card.image}`}
+                      image={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${card.image}`}
                       alt={card.name}
                       sx={{ objectFit: 'contain', p: 2 }}
                     />
