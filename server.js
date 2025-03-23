@@ -201,18 +201,25 @@ app.get('/api/cards', async (req, res) => {
 app.get('/api/cards/:id', async (req, res) => {
   try {
     console.log('Fetching card with ID:', req.params.id);
-    const card = await Card.findById(req.params.id).populate('cardDesign');
-    console.log('Found card:', card);
+    console.log('Request headers:', req.headers);
+    
+    const card = await Card.findById(req.params.id)
+      .populate({
+        path: 'cardDesign',
+        select: 'name styles' // Explicitly select the fields we need
+      });
     
     if (!card) {
-      console.log('Card not found');
+      console.log('Card not found for ID:', req.params.id);
       return res.status(404).json({ message: 'Card not found' });
     }
     
-    console.log('Sending card data:', card);
+    console.log('Found card:', JSON.stringify(card, null, 2));
+    console.log('Card design:', JSON.stringify(card.cardDesign, null, 2));
     res.json(card);
   } catch (error) {
     console.error('Error fetching card:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: error.message });
   }
 });

@@ -46,16 +46,22 @@ function EditCard() {
     }
     const fetchData = async () => {
       try {
+        const apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
+        console.log('Using API URL:', apiUrl);
         console.log('Fetching card data for ID:', id);
-        const cardRes = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`);
+        
+        const cardRes = await axios.get(`${apiUrl}/api/cards/${id}`);
+        console.log('API Response status:', cardRes.status);
+        console.log('API Response headers:', cardRes.headers);
         const cardData = cardRes.data;
-        console.log('Received card data:', cardData);
+        console.log('Received card data:', JSON.stringify(cardData, null, 2));
         
-        console.log('Fetching designs');
-        const designsRes = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
-        console.log('Received designs:', designsRes.data);
+        if (!cardData) {
+          console.error('No card data received');
+          return;
+        }
         
-        // Set the card data
+        // Set the card data immediately after receiving it
         const cardState = {
           name: cardData.name || '',
           type: cardData.type || '',
@@ -68,21 +74,26 @@ function EditCard() {
           cardDesign: cardData.cardDesign?._id || '',
           image: null
         };
-        console.log('Setting card state:', cardState);
+        console.log('Setting initial card state:', JSON.stringify(cardState, null, 2));
         setCard(cardState);
 
-        // Set the designs
+        // Fetch designs after setting card data
+        console.log('Fetching designs from:', `${apiUrl}/api/card-designs`);
+        const designsRes = await axios.get(`${apiUrl}/api/card-designs`);
+        console.log('Designs API Response status:', designsRes.status);
+        console.log('Received designs:', JSON.stringify(designsRes.data, null, 2));
         setDesigns(designsRes.data);
 
         // Set image preview if exists
         if (cardData.image) {
-          const imageUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${cardData.image}`;
+          const imageUrl = `${apiUrl}/api/files/${cardData.image}`;
           console.log('Setting image preview:', imageUrl);
           setPreview(imageUrl);
         }
 
       } catch (error) {
         console.error('Error fetching data:', error);
+        console.error('Error details:', error.response?.data || error.message);
         alert('Error loading card data');
         navigate('/gallery');
       }
@@ -93,7 +104,7 @@ function EditCard() {
 
   // Add effect to log card state changes
   useEffect(() => {
-    console.log('Card state updated:', card);
+    console.log('Card state updated:', JSON.stringify(card, null, 2));
   }, [card]);
 
   // Handle form field changes
@@ -105,7 +116,7 @@ function EditCard() {
         ...prev,
         [name]: value
       };
-      console.log('New card state:', newState);
+      console.log('New card state:', JSON.stringify(newState, null, 2));
       return newState;
     });
   };
