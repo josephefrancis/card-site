@@ -97,8 +97,15 @@ function DesignEditor() {
     e.preventDefault();
     try {
       console.log('Starting to save design...');
+      
+      // Validate required fields
+      if (!formData.name.trim()) {
+        setError('Design name is required');
+        return;
+      }
+
       const dataToSend = {
-        ...formData,
+        name: formData.name.trim(),
         styles: {
           ...formData.styles,
           titleSize: formData.styles.titleSize.toString().includes('px') 
@@ -109,9 +116,13 @@ function DesignEditor() {
             : `${formData.styles.textSize}px`,
           titleFontWeight: formData.styles.titleFontWeight || 'normal',
           textFontWeight: formData.styles.textFontWeight || 'normal',
-          titleAlignment: formData.styles.titleAlignment || 'left'
+          titleAlignment: formData.styles.titleAlignment || 'left',
+          gradientColors: Array.isArray(formData.styles.gradientColors) 
+            ? formData.styles.gradientColors 
+            : ['#ffffff', '#f0f0f0']
         }
       };
+      
       console.log('Data to send:', dataToSend);
       console.log('API URL:', `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
 
@@ -126,10 +137,11 @@ function DesignEditor() {
       console.log('Design saved successfully');
       fetchDesigns();
       resetForm();
+      setError(null);
     } catch (error) {
       console.error('Error saving design:', error);
       console.error('Error details:', error.response?.data || error.message);
-      setError('Failed to save design');
+      setError(error.response?.data?.message || 'Failed to save design');
     }
   };
 
