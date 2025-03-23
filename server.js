@@ -216,10 +216,17 @@ app.delete('/api/cards/:id', async (req, res) => {
 });
 
 // Serve static files from uploads directory
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve static files from React build directory in production
 if (process.env.NODE_ENV === 'production') {
+  // Ensure uploads directory exists in production
+  const uploadsDir = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Serve static files from React build directory
   app.use(express.static(path.join(__dirname, 'client/build')));
   
   // Handle React routing, return all requests to React app
