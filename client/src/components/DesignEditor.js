@@ -84,6 +84,7 @@ function DesignEditor() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log('Starting to save design...');
       const dataToSend = {
         ...formData,
         styles: {
@@ -99,16 +100,23 @@ function DesignEditor() {
           titleAlignment: formData.styles.titleAlignment || 'left'
         }
       };
+      console.log('Data to send:', dataToSend);
+      console.log('API URL:', `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
 
       if (selectedDesign) {
+        console.log('Updating existing design...');
         await axios.put(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs/${selectedDesign._id}`, dataToSend);
       } else {
-        await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`, dataToSend);
+        console.log('Creating new design...');
+        const response = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`, dataToSend);
+        console.log('Response:', response.data);
       }
+      console.log('Design saved successfully');
       fetchDesigns();
       resetForm();
     } catch (error) {
       console.error('Error saving design:', error);
+      console.error('Error details:', error.response?.data || error.message);
     }
   };
 

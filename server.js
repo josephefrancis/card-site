@@ -16,14 +16,15 @@ app.use(cors({
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pokemon-cards', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => {
-  console.log('Connected to MongoDB');
-}).catch((error) => {
-  console.error('MongoDB connection error:', error);
-});
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('MongoDB connected successfully');
+    console.log('Connected to database:', process.env.MONGODB_URI.split('/').pop());
+  })
+  .catch((error) => {
+    console.error('MongoDB connection error:', error);
+    console.error('Connection string:', process.env.MONGODB_URI);
+  });
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -116,32 +117,42 @@ const CardDesign = mongoose.model('CardDesign', cardDesignSchema);
 // Card Design Routes
 app.post('/api/card-designs', async (req, res) => {
   try {
+    console.log('Received card design creation request:', req.body);
     const design = new CardDesign(req.body);
     await design.save();
+    console.log('Card design saved successfully:', design);
     res.status(201).json(design);
   } catch (error) {
+    console.error('Error saving card design:', error);
     res.status(400).json({ message: error.message });
   }
 });
 
 app.get('/api/card-designs', async (req, res) => {
   try {
-    const designs = await CardDesign.find().sort({ createdAt: -1 });
+    console.log('Fetching all card designs');
+    const designs = await CardDesign.find();
+    console.log('Found designs:', designs.length);
     res.json(designs);
   } catch (error) {
+    console.error('Error fetching card designs:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
 app.put('/api/card-designs/:id', async (req, res) => {
   try {
+    console.log('Updating card design:', req.params.id);
+    console.log('Update data:', req.body);
     const design = await CardDesign.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true }
     );
+    console.log('Card design updated successfully:', design);
     res.json(design);
   } catch (error) {
+    console.error('Error updating card design:', error);
     res.status(400).json({ message: error.message });
   }
 });
