@@ -54,7 +54,7 @@ function EditCard() {
       console.log('Fetched card data:', card);
 
       // Set form data with proper type conversion for numbers
-      setFormData({
+      const formDataToSet = {
         name: card.name || '',
         type: card.type || '',
         hp: card.hp?.toString() || '',
@@ -65,12 +65,16 @@ function EditCard() {
         speed: card.speed?.toString() || '',
         cardDesign: card.cardDesign?._id || '',
         image: null,
-      });
+      };
+      console.log('Setting form data:', formDataToSet);
+      setFormData(formDataToSet);
 
       // Set current image and preview if image exists
       if (card.image) {
         setCurrentImage(card.image);
-        setPreview(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`);
+        const imageUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`;
+        console.log('Setting image preview:', imageUrl);
+        setPreview(imageUrl);
       }
 
       // Set selected design if it exists
@@ -98,10 +102,14 @@ function EditCard() {
     const { name, value } = e.target;
     console.log('Form field changed:', name, value);
     
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const newData = {
+        ...prev,
+        [name]: value,
+      };
+      console.log('New form data:', newData);
+      return newData;
+    });
 
     if (name === 'cardDesign') {
       console.log('Card design changed to:', value);
