@@ -140,7 +140,7 @@ function Gallery() {
                     <CardMedia
                       component="img"
                       height="200"
-                      image={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${card.image}`}
+                      image={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`}
                       alt={card.name}
                       sx={{ objectFit: 'contain', p: 2 }}
                     />

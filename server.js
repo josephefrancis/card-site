@@ -7,6 +7,7 @@ const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
+const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
@@ -26,22 +27,44 @@ mongoose.connect(process.env.MONGODB_URI)
     console.error('Connection string:', process.env.MONGODB_URI);
   });
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // Ensure uploads directory exists
-    const uploadsDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadsDir)){
-      fs.mkdirSync(uploadsDir);
-    }
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
+// GridFS Configuration
+const { GridFsStorage } = require('multer-gridfs-storage');
+const { Grid } = require('gridfs-stream');
+
+let gfs;
+let gridfsBucket;
+
+mongoose.connection.once('open', () => {
+  gridfsBucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+    bucketName: 'uploads'
+  });
+  gfs = Grid(mongoose.connection.db, mongoose.mongo);
+  gfs.collection('uploads');
+});
+
+// Configure multer for GridFS storage
+const storage = new GridFsStorage({
+  url: process.env.MONGODB_URI,
+  options: { useNewUrlParser: true, useUnifiedTopology: true },
+  file: (req, file) => {
+    return {
+      bucketName: 'uploads',
+      filename: `${Date.now()}-${file.originalname}`
+    };
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
+
+// Serve static files from React build directory in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/build')));
+  
+  // Handle React routing, return all requests to React app
+  app.get('*', function(req, res) {
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+  });
+}
 
 // Card Design Schema
 const cardDesignSchema = new mongoose.Schema({
@@ -93,7 +116,7 @@ const cardDesignSchema = new mongoose.Schema({
 // Card Schema
 const cardSchema = new mongoose.Schema({
   name: String,
-  image: String,
+  image: String, // This will store the GridFS file ID
   type: String,
   hp: Number,
   attack: Number,
@@ -113,6 +136,22 @@ const cardSchema = new mongoose.Schema({
 
 const Card = mongoose.model('Card', cardSchema);
 const CardDesign = mongoose.model('CardDesign', cardDesignSchema);
+
+// GridFS Routes
+app.get('/api/files/:filename', async (req, res) => {
+  try {
+    const file = await gfs.files.findOne({ filename: req.params.filename });
+    if (!file) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+    const readStream = gridfsBucket.openDownloadStream(file._id);
+    res.set('Content-Type', file.contentType);
+    readStream.pipe(res);
+  } catch (error) {
+    console.error('Error serving file:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Card Design Routes
 app.post('/api/card-designs', async (req, res) => {
@@ -159,7 +198,7 @@ app.put('/api/card-designs/:id', async (req, res) => {
 
 app.delete('/api/card-designs/:id', async (req, res) => {
   try {
-    await CardDesign.findByIdAndDelete(req.params.id);
+    const design = await CardDesign.findByIdAndDelete(req.params.id);
     res.json({ message: 'Design deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -169,24 +208,32 @@ app.delete('/api/card-designs/:id', async (req, res) => {
 // Card Routes
 app.post('/api/cards', upload.single('image'), async (req, res) => {
   try {
-    const card = new Card({
+    console.log('Received card creation request:', req.body);
+    console.log('File:', req.file);
+    
+    const cardData = {
       ...req.body,
-      image: req.file ? `/uploads/${req.file.filename}` : null
-    });
+      image: req.file ? req.file.filename : null
+    };
+    
+    const card = new Card(cardData);
     await card.save();
+    console.log('Card saved successfully:', card);
     res.status(201).json(card);
   } catch (error) {
+    console.error('Error creating card:', error);
     res.status(400).json({ message: error.message });
   }
 });
 
 app.get('/api/cards', async (req, res) => {
   try {
-    const cards = await Card.find()
-      .populate('cardDesign')
-      .sort({ createdAt: -1 });
+    console.log('Fetching all cards');
+    const cards = await Card.find().populate('cardDesign');
+    console.log('Found cards:', cards.length);
     res.json(cards);
   } catch (error) {
+    console.error('Error fetching cards:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -198,44 +245,22 @@ app.delete('/api/cards/:id', async (req, res) => {
       return res.status(404).json({ message: 'Card not found' });
     }
 
-    // Delete the image file if it exists
+    // Delete the image from GridFS if it exists
     if (card.image) {
-      const imagePath = path.join(__dirname, card.image);
-      try {
-        fs.unlinkSync(imagePath);
-      } catch (err) {
-        console.error('Error deleting image file:', err);
+      const file = await gfs.files.findOne({ filename: card.image });
+      if (file) {
+        await gridfsBucket.delete(file._id);
       }
     }
 
     await Card.findByIdAndDelete(req.params.id);
     res.json({ message: 'Card deleted successfully' });
   } catch (error) {
+    console.error('Error deleting card:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Serve static files from React build directory in production
-if (process.env.NODE_ENV === 'production') {
-  // Ensure uploads directory exists in production
-  const uploadsDir = path.join(__dirname, 'uploads');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-
-  // Serve static files from React build directory
-  app.use(express.static(path.join(__dirname, 'client/build')));
-  
-  // Handle React routing, return all requests to React app
-  app.get('*', function(req, res) {
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
-  });
-}
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 }); 
