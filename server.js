@@ -305,31 +305,59 @@ app.get('/api/files/:filename', async (req, res) => {
   }
 });
 
-// MongoDB Connection
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => {
-  console.log('Connected to MongoDB');
-  
-  // Initialize GridFS
-  const conn = mongoose.connection;
-  gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
-    bucketName: 'uploads'
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  console.error('Error stack:', err.stack);
+  res.status(500).json({
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
-  gfs = Grid(conn.db, mongoose.mongo);
-  gfs.collection('uploads');
-
-  // Start server after successful connection
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-  });
-})
-.catch((err) => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
 });
+
+// Initialize MongoDB connection and start server
+const initializeServer = async () => {
+  try {
+    console.log('Attempting to connect to MongoDB...');
+    await mongoose.connect(mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000 // Timeout after 5s instead of 30s
+    });
+    console.log('Connected to MongoDB successfully');
+
+    // Initialize GridFS
+    const conn = mongoose.connection;
+    gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
+      bucketName: 'uploads'
+    });
+    gfs = Grid(conn.db, mongoose.mongo);
+    gfs.collection('uploads');
+    console.log('GridFS initialized successfully');
+
+    // Start server after successful connection
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (err) {
+    console.error('Failed to initialize server:', err);
+    console.error('MongoDB connection error:', err.message);
+    process.exit(1);
+  }
+};
+
+// Handle MongoDB connection errors after initial connection
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+// Initialize the server
+initializeServer();
 
 // Serve static files from React build directory in production
 if (process.env.NODE_ENV === 'production') {
