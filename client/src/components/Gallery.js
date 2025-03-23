@@ -31,29 +31,26 @@ function Gallery() {
   const [filter, setFilter] = useState('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cardToDelete, setCardToDelete] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchCards();
-    fetchDesigns();
+    const fetchData = async () => {
+      try {
+        const [cardsResponse, designsResponse] = await Promise.all([
+          axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards`),
+          axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`)
+        ]);
+
+        setCards(Array.isArray(cardsResponse.data) ? cardsResponse.data : []);
+        setDesigns(Array.isArray(designsResponse.data) ? designsResponse.data : []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to load cards and designs');
+      }
+    };
+
+    fetchData();
   }, []);
-
-  const fetchCards = async () => {
-    try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards`);
-      setCards(response.data);
-    } catch (error) {
-      console.error('Error fetching cards:', error);
-    }
-  };
-
-  const fetchDesigns = async () => {
-    try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
-      setDesigns(response.data);
-    } catch (error) {
-      console.error('Error fetching designs:', error);
-    }
-  };
 
   const handleDeleteClick = (card) => {
     setCardToDelete(card);
@@ -61,8 +58,6 @@ function Gallery() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!cardToDelete) return;
-
     try {
       await axios.delete(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${cardToDelete._id}`);
       setCards(cards.filter(card => card._id !== cardToDelete._id));
@@ -70,7 +65,7 @@ function Gallery() {
       setCardToDelete(null);
     } catch (error) {
       console.error('Error deleting card:', error);
-      alert('Error deleting card. Please try again.');
+      setError('Failed to delete card');
     }
   };
 
@@ -80,27 +75,46 @@ function Gallery() {
 
   const filteredCards = cards.filter((card) => {
     if (filter === 'all') return true;
-    return card.cardDesign?._id === filter;
+    return card.cardDesign && card.cardDesign._id === filter;
   });
 
   const getCardStyle = (design) => {
-    if (!design?.styles) return {};
-    
-    const styles = design.styles;
+    if (!design) return {};
     return {
-      background: styles.gradientColors.length > 1
-        ? `linear-gradient(45deg, ${styles.gradientColors.join(', ')})`
-        : styles.background,
-      borderColor: styles.borderColor,
-      borderWidth: `${styles.borderWidth}px`,
-      borderStyle: styles.borderStyle,
-      borderRadius: `${styles.borderRadius}px`,
-      boxShadow: `0 0 ${styles.shadowBlur}px ${styles.shadowColor}`,
-      height: '100%',
-      color: styles.textColor,
-      position: 'relative',
+      background: design.styles.background,
+      border: `${design.styles.borderWidth}px ${design.styles.borderStyle} ${design.styles.borderColor}`,
+      borderRadius: `${design.styles.borderRadius}px`,
+      color: design.styles.textColor,
+      boxShadow: `0 0 ${design.styles.shadowBlur}px ${design.styles.shadowColor}`,
+      '& .MuiCardMedia-root': {
+        borderTopLeftRadius: `${design.styles.borderRadius}px`,
+        borderTopRightRadius: `${design.styles.borderRadius}px`,
+      },
+      '& .card-title': {
+        color: design.styles.titleColor,
+        fontWeight: design.styles.titleFontWeight,
+        textAlign: design.styles.titleAlignment,
+        fontSize: design.styles.titleSize,
+      },
+      '& .card-text': {
+        fontWeight: design.styles.textFontWeight,
+        fontSize: design.styles.textSize,
+      },
+      '& .stats-container': {
+        backgroundColor: design.styles.statsBgColor,
+      },
     };
   };
+
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Paper elevation={3} sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="error">{error}</Typography>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -115,7 +129,7 @@ function Gallery() {
               label="Filter by Design"
             >
               <MenuItem value="all">All Cards</MenuItem>
-              {designs.map((design) => (
+              {Array.isArray(designs) && designs.map((design) => (
                 <MenuItem key={design._id} value={design._id}>
                   {design.name}
                 </MenuItem>
@@ -124,7 +138,7 @@ function Gallery() {
           </FormControl>
         </Box>
         <Grid container spacing={3}>
-          {filteredCards.map((card) => (
+          {Array.isArray(filteredCards) && filteredCards.map((card) => (
             <Grid item xs={12} sm={6} md={4} key={card._id}>
               <Card sx={getCardStyle(card.cardDesign)}>
                 <Box sx={{ position: 'relative' }}>
@@ -163,68 +177,34 @@ function Gallery() {
                   )}
                 </Box>
                 <CardContent>
-                  <Typography 
-                    gutterBottom 
-                    variant="h5" 
-                    component="div"
-                    sx={{ 
-                      color: card.cardDesign?.styles?.titleColor || 'inherit',
-                      fontWeight: card.cardDesign?.styles?.titleFontWeight || 'normal',
-                      fontSize: card.cardDesign?.styles?.titleSize || '24px',
-                      textAlign: card.cardDesign?.styles?.titleAlignment || 'left',
-                    }}
-                  >
+                  <Typography variant="h6" className="card-title">
                     {card.name}
                   </Typography>
-                  <Box sx={{ 
-                    bgcolor: card.cardDesign?.styles?.statsBgColor || 'rgba(0,0,0,0.1)', 
-                    p: 2, 
-                    borderRadius: '5px',
-                    mt: 2
-                  }}>
-                    <Typography 
-                      variant="body2"
-                      sx={{
-                        fontWeight: card.cardDesign?.styles?.textFontWeight || 'normal',
-                        fontSize: card.cardDesign?.styles?.textSize || '16px',
-                      }}
-                    >
-                      Type: {card.type}
-                    </Typography>
-                    <Grid container spacing={1} sx={{ mt: 1 }}>
-                      {[
-                        { label: 'HP', value: card.hp },
-                        { label: 'Attack', value: card.attack },
-                        { label: 'Defense', value: card.defense },
-                        { label: 'Speed', value: card.speed },
-                        { label: 'Sp. Attack', value: card.specialAttack },
-                        { label: 'Sp. Defense', value: card.specialDefense },
-                      ].map((stat) => (
-                        <Grid item xs={6} key={stat.label}>
-                          <Typography 
-                            variant="body2"
-                            sx={{
-                              fontWeight: card.cardDesign?.styles?.textFontWeight || 'normal',
-                              fontSize: card.cardDesign?.styles?.textSize || '16px',
-                            }}
-                          >
-                            {stat.label}: {stat.value}
-                          </Typography>
-                        </Grid>
-                      ))}
+                  <Typography variant="body2" className="card-text">
+                    Type: {card.type}
+                  </Typography>
+                  <Box className="stats-container" sx={{ mt: 2, p: 2, borderRadius: 1 }}>
+                    <Grid container spacing={1}>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">HP: {card.hp}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">Attack: {card.attack}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">Defense: {card.defense}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">Speed: {card.speed}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">Sp. Atk: {card.specialAttack}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">Sp. Def: {card.specialDefense}</Typography>
+                      </Grid>
                     </Grid>
                   </Box>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      mt: 2, 
-                      fontStyle: 'italic',
-                      fontWeight: card.cardDesign?.styles?.textFontWeight || 'normal',
-                      fontSize: card.cardDesign?.styles?.textSize || '16px',
-                    }}
-                  >
-                    Design: {card.cardDesign?.name || 'Default'}
-                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -232,20 +212,14 @@ function Gallery() {
         </Grid>
       </Paper>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-      >
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Card</DialogTitle>
         <DialogContent>
-          Are you sure you want to delete "{cardToDelete?.name}"? This action cannot be undone.
+          Are you sure you want to delete this card?
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error">
-            Delete
-          </Button>
+          <Button onClick={handleDeleteConfirm} color="error">Delete</Button>
         </DialogActions>
       </Dialog>
     </Container>
