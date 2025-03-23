@@ -19,6 +19,9 @@ function EditCard() {
   const { id } = useParams();
   const navigate = useNavigate();
   
+  console.log('EditCard component rendering');
+  console.log('Current id from params:', id);
+  
   // Single state object for the form
   const [card, setCard] = useState({
     name: '',
@@ -38,6 +41,7 @@ function EditCard() {
 
   // Load card and designs data
   useEffect(() => {
+    console.log('EditCard useEffect triggered');
     console.log('EditCard mounted with ID:', id);
     if (!id) {
       console.error('No card ID provided in route');
