@@ -64,7 +64,7 @@ function DesignEditor() {
 
   const fetchDesigns = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/card-designs');
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
       setDesigns(response.data);
     } catch (error) {
       console.error('Error fetching designs:', error);
@@ -101,9 +101,9 @@ function DesignEditor() {
       };
 
       if (selectedDesign) {
-        await axios.put(`http://localhost:5000/api/card-designs/${selectedDesign._id}`, dataToSend);
+        await axios.put(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs/${selectedDesign._id}`, dataToSend);
       } else {
-        await axios.post('http://localhost:5000/api/card-designs', dataToSend);
+        await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`, dataToSend);
       }
       fetchDesigns();
       resetForm();
@@ -114,7 +114,7 @@ function DesignEditor() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/card-designs/${id}`);
+      await axios.delete(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs/${id}`);
       fetchDesigns();
     } catch (error) {
       console.error('Error deleting design:', error);

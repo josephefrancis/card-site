@@ -37,7 +37,7 @@ function CreateCard() {
 
   const fetchDesigns = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/card-designs');
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
       setDesigns(response.data);
     } catch (error) {
       console.error('Error fetching designs:', error);
@@ -74,7 +74,7 @@ function CreateCard() {
     });
 
     try {
-      await axios.post('http://localhost:5000/api/cards', formDataToSend);
+      await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards`, formDataToSend);
       alert('Card created successfully!');
       setFormData({
         name: '',
