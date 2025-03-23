@@ -52,21 +52,30 @@ function EditCard() {
       const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`);
       const card = response.data;
       console.log('Fetched card data:', card);
+
+      // Set form data with proper type conversion for numbers
       setFormData({
-        name: card.name,
-        type: card.type,
-        hp: card.hp,
-        attack: card.attack,
-        defense: card.defense,
-        specialAttack: card.specialAttack,
-        specialDefense: card.specialDefense,
-        speed: card.speed,
+        name: card.name || '',
+        type: card.type || '',
+        hp: card.hp?.toString() || '',
+        attack: card.attack?.toString() || '',
+        defense: card.defense?.toString() || '',
+        specialAttack: card.specialAttack?.toString() || '',
+        specialDefense: card.specialDefense?.toString() || '',
+        speed: card.speed?.toString() || '',
         cardDesign: card.cardDesign?._id || '',
         image: null,
       });
-      setCurrentImage(card.image);
-      setPreview(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`);
+
+      // Set current image and preview if image exists
+      if (card.image) {
+        setCurrentImage(card.image);
+        setPreview(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`);
+      }
+
+      // Set selected design if it exists
       if (card.cardDesign) {
+        console.log('Setting selected design:', card.cardDesign);
         setSelectedDesign(card.cardDesign);
       }
     } catch (error) {
@@ -87,13 +96,17 @@ function EditCard() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    console.log('Form field changed:', name, value);
+    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
 
     if (name === 'cardDesign') {
+      console.log('Card design changed to:', value);
       const design = designs.find(d => d._id === value);
+      console.log('Found design:', design);
       setSelectedDesign(design);
     }
   };
