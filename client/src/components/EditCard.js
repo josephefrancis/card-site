@@ -50,9 +50,22 @@ function EditCard() {
         console.log('Using API URL:', apiUrl);
         console.log('Fetching card data for ID:', id);
         
-        const cardRes = await axios.get(`${apiUrl}/api/cards/${id}`);
-        console.log('API Response status:', cardRes.status);
-        console.log('API Response headers:', cardRes.headers);
+        // Log the full URL being called
+        const cardUrl = `${apiUrl}/api/cards/${id}`;
+        console.log('Making request to:', cardUrl);
+        
+        // Add error handling for the request
+        let cardRes;
+        try {
+          cardRes = await axios.get(cardUrl);
+          console.log('API Response received:', cardRes);
+        } catch (requestError) {
+          console.error('Request failed:', requestError);
+          console.error('Request error response:', requestError.response);
+          console.error('Request error message:', requestError.message);
+          throw requestError;
+        }
+        
         const cardData = cardRes.data;
         console.log('Received card data:', JSON.stringify(cardData, null, 2));
         
@@ -78,9 +91,20 @@ function EditCard() {
         setCard(cardState);
 
         // Fetch designs after setting card data
-        console.log('Fetching designs from:', `${apiUrl}/api/card-designs`);
-        const designsRes = await axios.get(`${apiUrl}/api/card-designs`);
-        console.log('Designs API Response status:', designsRes.status);
+        const designsUrl = `${apiUrl}/api/card-designs`;
+        console.log('Fetching designs from:', designsUrl);
+        
+        let designsRes;
+        try {
+          designsRes = await axios.get(designsUrl);
+          console.log('Designs API Response received:', designsRes);
+        } catch (designsError) {
+          console.error('Designs request failed:', designsError);
+          console.error('Designs error response:', designsError.response);
+          console.error('Designs error message:', designsError.message);
+          throw designsError;
+        }
+        
         console.log('Received designs:', JSON.stringify(designsRes.data, null, 2));
         setDesigns(designsRes.data);
 
@@ -92,8 +116,9 @@ function EditCard() {
         }
 
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error in fetchData:', error);
         console.error('Error details:', error.response?.data || error.message);
+        console.error('Error stack:', error.stack);
         alert('Error loading card data');
         navigate('/gallery');
       }

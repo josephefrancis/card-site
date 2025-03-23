@@ -14,8 +14,18 @@ const port = process.env.PORT || 5000;
 // Middleware
 app.use(cors({
   origin: ['https://pokemon-card-creator.onrender.com', 'http://localhost:3000'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Add logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  console.log('Request headers:', req.headers);
+  next();
+});
+
 app.use(express.json());
 
 // MongoDB Connection
@@ -202,6 +212,7 @@ app.get('/api/cards/:id', async (req, res) => {
   try {
     console.log('Fetching card with ID:', req.params.id);
     console.log('Request headers:', req.headers);
+    console.log('Request query:', req.query);
     
     const card = await Card.findById(req.params.id)
       .populate({
@@ -216,6 +227,10 @@ app.get('/api/cards/:id', async (req, res) => {
     
     console.log('Found card:', JSON.stringify(card, null, 2));
     console.log('Card design:', JSON.stringify(card.cardDesign, null, 2));
+    
+    // Set CORS headers explicitly for this route
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
     res.json(card);
   } catch (error) {
     console.error('Error fetching card:', error);
