@@ -23,46 +23,6 @@ const mongoURI = process.env.MONGODB_URI;
 let gfs;
 let gridfsBucket;
 
-mongoose.connect(mongoURI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    
-    // Initialize GridFS
-    const conn = mongoose.connection;
-    gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
-      bucketName: 'uploads'
-    });
-    gfs = Grid(conn.db, mongoose.mongo);
-    gfs.collection('uploads');
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
-  });
-
-// Configure multer for GridFS storage
-const storage = new GridFsStorage({
-  url: mongoURI,
-  options: { useNewUrlParser: true, useUnifiedTopology: true },
-  file: (req, file) => {
-    return {
-      bucketName: 'uploads',
-      filename: `${Date.now()}-${file.originalname}`
-    };
-  }
-});
-
-const upload = multer({ storage });
-
-// Serve static files from React build directory in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
-  
-  // Handle React routing, return all requests to React app
-  app.get('*', function(req, res) {
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
-  });
-}
-
 // Card Design Schema
 const cardDesignSchema = new mongoose.Schema({
   name: {
@@ -131,8 +91,59 @@ const cardSchema = new mongoose.Schema({
   }
 });
 
+// Initialize models
 const Card = mongoose.model('Card', cardSchema);
 const CardDesign = mongoose.model('CardDesign', cardDesignSchema);
+
+// Configure multer for GridFS storage
+const storage = new GridFsStorage({
+  url: mongoURI,
+  options: { useNewUrlParser: true, useUnifiedTopology: true },
+  file: (req, file) => {
+    return {
+      bucketName: 'uploads',
+      filename: `${Date.now()}-${file.originalname}`
+    };
+  }
+});
+
+const upload = multer({ storage });
+
+// MongoDB Connection
+mongoose.connect(mongoURI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => {
+  console.log('Connected to MongoDB');
+  
+  // Initialize GridFS
+  const conn = mongoose.connection;
+  gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
+    bucketName: 'uploads'
+  });
+  gfs = Grid(conn.db, mongoose.mongo);
+  gfs.collection('uploads');
+
+  // Start server after successful connection
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+})
+.catch((err) => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1);
+});
+
+// Serve static files from React build directory in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/build')));
+  
+  // Handle React routing, return all requests to React app
+  app.get('*', function(req, res) {
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+  });
+}
 
 // Serve files from GridFS
 app.get('/api/files/:filename', async (req, res) => {
@@ -167,7 +178,7 @@ app.post('/api/card-designs', async (req, res) => {
 app.get('/api/card-designs', async (req, res) => {
   try {
     console.log('Fetching all card designs');
-    const designs = await CardDesign.find();
+    const designs = await CardDesign.find().sort({ createdAt: -1 });
     console.log('Found designs:', designs.length);
     res.json(designs);
   } catch (error) {
@@ -226,7 +237,7 @@ app.post('/api/cards', upload.single('image'), async (req, res) => {
 app.get('/api/cards', async (req, res) => {
   try {
     console.log('Fetching all cards');
-    const cards = await Card.find().populate('cardDesign');
+    const cards = await Card.find().populate('cardDesign').sort({ createdAt: -1 });
     console.log('Found cards:', cards.length);
     res.json(cards);
   } catch (error) {
@@ -250,10 +261,9 @@ app.delete('/api/cards/:id', async (req, res) => {
       }
     }
 
-    await Card.findByIdAndDelete(req.params.id);
+    await card.remove();
     res.json({ message: 'Card deleted successfully' });
   } catch (error) {
-    console.error('Error deleting card:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -284,8 +294,4 @@ app.put('/api/cards/:id', upload.single('image'), async (req, res) => {
     console.error('Error updating card:', error);
     res.status(500).json({ message: 'Error updating card' });
   }
-});
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
 }); 
