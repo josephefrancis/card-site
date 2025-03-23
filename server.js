@@ -4,6 +4,8 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const multerGridfsStorage = require('multer-gridfs-storage');
+const Grid = require('gridfs-stream');
 require('dotenv').config();
 
 const app = express();
@@ -17,34 +19,25 @@ app.use(cors({
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('MongoDB connected successfully');
-    console.log('Connected to database:', process.env.MONGODB_URI.split('/').pop());
-  })
-  .catch((error) => {
-    console.error('MongoDB connection error:', error);
-    console.error('Connection string:', process.env.MONGODB_URI);
-  });
-
-// GridFS Configuration
-const { GridFsStorage } = require('multer-gridfs-storage');
-const { Grid } = require('gridfs-stream');
-
+const mongoURI = process.env.MONGODB_URI;
 let gfs;
-let gridfsBucket;
 
-mongoose.connection.once('open', () => {
-  gridfsBucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
-    bucketName: 'uploads'
+mongoose.connect(mongoURI)
+  .then(() => {
+    console.log('Connected to MongoDB');
+    
+    // Initialize GridFS
+    const conn = mongoose.connection;
+    gfs = Grid(conn.db, mongoose.mongo);
+    gfs.collection('uploads');
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
   });
-  gfs = Grid(mongoose.connection.db, mongoose.mongo);
-  gfs.collection('uploads');
-});
 
 // Configure multer for GridFS storage
-const storage = new GridFsStorage({
-  url: process.env.MONGODB_URI,
+const storage = multerGridfsStorage({
+  url: mongoURI,
   options: { useNewUrlParser: true, useUnifiedTopology: true },
   file: (req, file) => {
     return {
@@ -137,19 +130,19 @@ const cardSchema = new mongoose.Schema({
 const Card = mongoose.model('Card', cardSchema);
 const CardDesign = mongoose.model('CardDesign', cardDesignSchema);
 
-// GridFS Routes
+// Serve files from GridFS
 app.get('/api/files/:filename', async (req, res) => {
   try {
     const file = await gfs.files.findOne({ filename: req.params.filename });
     if (!file) {
       return res.status(404).json({ message: 'File not found' });
     }
-    const readStream = gridfsBucket.openDownloadStream(file._id);
+    const readStream = gfs.createReadStream(file.filename);
     res.set('Content-Type', file.contentType);
     readStream.pipe(res);
   } catch (error) {
     console.error('Error serving file:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Error serving file' });
   }
 });
 
@@ -249,7 +242,7 @@ app.delete('/api/cards/:id', async (req, res) => {
     if (card.image) {
       const file = await gfs.files.findOne({ filename: card.image });
       if (file) {
-        await gridfsBucket.delete(file._id);
+        await gfs.delete(file._id);
       }
     }
 
