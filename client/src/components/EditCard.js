@@ -58,6 +58,9 @@ function EditCard() {
       });
       setCurrentImage(card.image);
       setPreview(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`);
+      if (card.cardDesign) {
+        setSelectedDesign(card.cardDesign);
+      }
     } catch (error) {
       console.error('Error fetching card:', error);
       alert('Error fetching card details. Please try again.');
@@ -122,20 +125,20 @@ function EditCard() {
   };
 
   const getCardStyle = () => {
-    if (!selectedDesign) return {};
+    if (!selectedDesign?.styles) return {};
     
     const styles = selectedDesign.styles;
     return {
-      background: styles.gradientColors.length > 1
+      background: styles.gradientColors?.length > 1
         ? `linear-gradient(45deg, ${styles.gradientColors.join(', ')})`
-        : styles.background,
-      borderColor: styles.borderColor,
-      borderWidth: `${styles.borderWidth}px`,
-      borderStyle: styles.borderStyle,
-      borderRadius: `${styles.borderRadius}px`,
-      boxShadow: `0 0 ${styles.shadowBlur}px ${styles.shadowColor}`,
+        : styles.background || '#ffffff',
+      borderColor: styles.borderColor || '#000000',
+      borderWidth: `${styles.borderWidth || 2}px`,
+      borderStyle: styles.borderStyle || 'solid',
+      borderRadius: `${styles.borderRadius || 8}px`,
+      boxShadow: `0 0 ${styles.shadowBlur || 4}px ${styles.shadowColor || 'rgba(0,0,0,0.2)'}`,
       padding: '20px',
-      color: styles.textColor,
+      color: styles.textColor || '#000000',
     };
   };
 
