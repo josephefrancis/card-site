@@ -1,21 +1,18 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import Navbar from './components/Navbar';
+import { ThemeProvider, createTheme } from '@mui/material';
 import CreateCard from './components/CreateCard';
 import Gallery from './components/Gallery';
 import DesignEditor from './components/DesignEditor';
-import EditCard from './components/EditCard';
+import Navbar from './components/Navbar';
 
 const theme = createTheme({
   palette: {
-    mode: 'dark',
     primary: {
-      main: '#ff0000',
+      main: '#1976d2',
     },
     secondary: {
-      main: '#ffd700',
+      main: '#dc004e',
     },
   },
 });
@@ -23,17 +20,14 @@ const theme = createTheme({
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline />
       <Router>
-        <div className="App">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Gallery />} />
-            <Route path="/create" element={<CreateCard />} />
-            <Route path="/edit-card/:id" element={<EditCard />} />
-            <Route path="/design-editor" element={<DesignEditor />} />
-          </Routes>
-        </div>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<CreateCard />} />
+          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/design-editor" element={<DesignEditor />} />
+          <Route path="/edit-card/:id" element={<CreateCard />} />
+        </Routes>
       </Router>
     </ThemeProvider>
   );

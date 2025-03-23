@@ -113,7 +113,7 @@ const cardDesignSchema = new mongoose.Schema({
 // Card Schema
 const cardSchema = new mongoose.Schema({
   name: String,
-  image: String, // This will store the GridFS file ID
+  image: String,
   type: String,
   hp: Number,
   attack: Number,
@@ -246,7 +246,7 @@ app.delete('/api/cards/:id', async (req, res) => {
     if (card.image) {
       const file = await gfs.files.findOne({ filename: card.image });
       if (file) {
-        await gfs.delete(file._id);
+        await gridfsBucket.delete(file._id);
       }
     }
 
@@ -273,7 +273,7 @@ app.put('/api/cards/:id', upload.single('image'), async (req, res) => {
       cardId,
       updateData,
       { new: true }
-    );
+    ).populate('cardDesign');
 
     if (!updatedCard) {
       return res.status(404).json({ message: 'Card not found' });
