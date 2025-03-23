@@ -99,6 +99,9 @@ function EditCard() {
     const { name, value } = e.target;
     console.log('Form field changed:', name, value);
     
+    // Update the form field directly
+    e.target.value = value;
+    
     setFormData((prev) => {
       const newData = {
         ...prev,
@@ -181,7 +184,7 @@ function EditCard() {
                 fullWidth
                 label="Name"
                 name="name"
-                value={formData.name}
+                defaultValue={formData.name}
                 onChange={handleChange}
                 required
               />
@@ -191,7 +194,7 @@ function EditCard() {
                 fullWidth
                 label="Type"
                 name="type"
-                value={formData.type}
+                defaultValue={formData.type}
                 onChange={handleChange}
                 required
               />
@@ -202,7 +205,7 @@ function EditCard() {
                 type="number"
                 label="HP"
                 name="hp"
-                value={formData.hp}
+                defaultValue={formData.hp}
                 onChange={handleChange}
                 required
               />
@@ -213,7 +216,7 @@ function EditCard() {
                 type="number"
                 label="Attack"
                 name="attack"
-                value={formData.attack}
+                defaultValue={formData.attack}
                 onChange={handleChange}
                 required
               />
@@ -224,7 +227,7 @@ function EditCard() {
                 type="number"
                 label="Defense"
                 name="defense"
-                value={formData.defense}
+                defaultValue={formData.defense}
                 onChange={handleChange}
                 required
               />
@@ -235,7 +238,7 @@ function EditCard() {
                 type="number"
                 label="Special Attack"
                 name="specialAttack"
-                value={formData.specialAttack}
+                defaultValue={formData.specialAttack}
                 onChange={handleChange}
                 required
               />
@@ -246,7 +249,7 @@ function EditCard() {
                 type="number"
                 label="Special Defense"
                 name="specialDefense"
-                value={formData.specialDefense}
+                defaultValue={formData.specialDefense}
                 onChange={handleChange}
                 required
               />
@@ -257,7 +260,7 @@ function EditCard() {
                 type="number"
                 label="Speed"
                 name="speed"
-                value={formData.speed}
+                defaultValue={formData.speed}
                 onChange={handleChange}
                 required
               />
@@ -267,7 +270,7 @@ function EditCard() {
                 <InputLabel>Card Design</InputLabel>
                 <Select
                   name="cardDesign"
-                  value={formData.cardDesign}
+                  defaultValue={formData.cardDesign}
                   onChange={handleChange}
                   label="Card Design"
                   required
