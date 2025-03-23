@@ -5,6 +5,7 @@ import CreateCard from './components/CreateCard';
 import Gallery from './components/Gallery';
 import DesignEditor from './components/DesignEditor';
 import Navbar from './components/Navbar';
+import EditCard from './components/EditCard';
 
 const theme = createTheme({
   palette: {
@@ -26,7 +27,7 @@ function App() {
           <Route path="/" element={<CreateCard />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/design-editor" element={<DesignEditor />} />
-          <Route path="/edit-card/:id" element={<CreateCard />} />
+          <Route path="/edit-card/:id" element={<EditCard />} />
         </Routes>
       </Router>
     </ThemeProvider>
