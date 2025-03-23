@@ -197,6 +197,22 @@ app.get('/api/cards', async (req, res) => {
   }
 });
 
+// Get a single card by ID
+app.get('/api/cards/:id', async (req, res) => {
+  try {
+    console.log('Fetching card:', req.params.id);
+    const card = await Card.findById(req.params.id).populate('cardDesign');
+    if (!card) {
+      return res.status(404).json({ message: 'Card not found' });
+    }
+    console.log('Found card:', card);
+    res.json(card);
+  } catch (error) {
+    console.error('Error fetching card:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 app.delete('/api/cards/:id', async (req, res) => {
   try {
     const card = await Card.findById(req.params.id);

@@ -78,30 +78,31 @@ function Gallery() {
     return card.cardDesign && card.cardDesign._id === filter;
   });
 
-  const getCardStyle = (design) => {
-    if (!design) return {};
+  const getCardStyle = (card) => {
+    if (!card.cardDesign?.styles) return {};
+    
+    const styles = card.cardDesign.styles;
     return {
-      background: design.styles.background,
-      border: `${design.styles.borderWidth}px ${design.styles.borderStyle} ${design.styles.borderColor}`,
-      borderRadius: `${design.styles.borderRadius}px`,
-      color: design.styles.textColor,
-      boxShadow: `0 0 ${design.styles.shadowBlur}px ${design.styles.shadowColor}`,
-      '& .MuiCardMedia-root': {
-        borderTopLeftRadius: `${design.styles.borderRadius}px`,
-        borderTopRightRadius: `${design.styles.borderRadius}px`,
-      },
+      background: styles.gradientColors?.length > 1
+        ? `linear-gradient(45deg, ${styles.gradientColors.join(', ')})`
+        : styles.background || '#ffffff',
+      border: `${styles.borderWidth || 2}px ${styles.borderStyle || 'solid'} ${styles.borderColor || '#000000'}`,
+      borderRadius: `${styles.borderRadius || 8}px`,
+      boxShadow: `0 0 ${styles.shadowBlur || 4}px ${styles.shadowColor || 'rgba(0,0,0,0.2)'}`,
+      padding: '20px',
+      color: styles.textColor || '#000000',
       '& .card-title': {
-        color: design.styles.titleColor,
-        fontWeight: design.styles.titleFontWeight,
-        textAlign: design.styles.titleAlignment,
-        fontSize: design.styles.titleSize,
+        color: styles.titleColor || '#000000',
+        fontWeight: styles.titleFontWeight || 'normal',
+        textAlign: styles.titleAlignment || 'left',
+        fontSize: styles.titleSize || '24px',
       },
       '& .card-text': {
-        fontWeight: design.styles.textFontWeight,
-        fontSize: design.styles.textSize,
+        fontWeight: styles.textFontWeight || 'normal',
+        fontSize: styles.textSize || '16px',
       },
       '& .stats-container': {
-        backgroundColor: design.styles.statsBgColor,
+        backgroundColor: styles.statsBgColor || '#f5f5f5',
       },
     };
   };
@@ -140,70 +141,49 @@ function Gallery() {
         <Grid container spacing={3}>
           {Array.isArray(filteredCards) && filteredCards.map((card) => (
             <Grid item xs={12} sm={6} md={4} key={card._id}>
-              <Card sx={getCardStyle(card.cardDesign)}>
-                <Box sx={{ position: 'relative' }}>
-                  <Box sx={{ 
-                    position: 'absolute', 
-                    top: 8, 
-                    right: 8, 
-                    zIndex: 1,
-                    display: 'flex',
-                    gap: 1,
-                    bgcolor: 'rgba(255,255,255,0.8)',
-                    borderRadius: '4px',
-                    p: 0.5
-                  }}>
-                    <IconButton
-                      onClick={() => handleEditClick(card)}
-                      size="small"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleDeleteClick(card)}
-                      size="small"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                  {card.image && (
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`}
-                      alt={card.name}
-                      sx={{ objectFit: 'contain', p: 2 }}
-                    />
-                  )}
-                </Box>
+              <Card sx={{ ...getCardStyle(card) }}>
+                <CardMedia
+                  component="img"
+                  height="200"
+                  image={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`}
+                  alt={card.name}
+                />
                 <CardContent>
-                  <Typography variant="h6" className="card-title">
+                  <Typography className="card-title" variant="h5" gutterBottom>
                     {card.name}
                   </Typography>
-                  <Typography variant="body2" className="card-text">
+                  <Typography className="card-text" variant="body1" gutterBottom>
                     Type: {card.type}
                   </Typography>
                   <Box className="stats-container" sx={{ mt: 2, p: 2, borderRadius: 1 }}>
-                    <Grid container spacing={1}>
+                    <Grid container spacing={2}>
                       <Grid item xs={6}>
-                        <Typography variant="body2">HP: {card.hp}</Typography>
+                        <Typography className="card-text">HP: {card.hp}</Typography>
                       </Grid>
                       <Grid item xs={6}>
-                        <Typography variant="body2">Attack: {card.attack}</Typography>
+                        <Typography className="card-text">Attack: {card.attack}</Typography>
                       </Grid>
                       <Grid item xs={6}>
-                        <Typography variant="body2">Defense: {card.defense}</Typography>
+                        <Typography className="card-text">Defense: {card.defense}</Typography>
                       </Grid>
                       <Grid item xs={6}>
-                        <Typography variant="body2">Speed: {card.speed}</Typography>
+                        <Typography className="card-text">Speed: {card.speed}</Typography>
                       </Grid>
                       <Grid item xs={6}>
-                        <Typography variant="body2">Sp. Atk: {card.specialAttack}</Typography>
+                        <Typography className="card-text">Sp. Atk: {card.specialAttack}</Typography>
                       </Grid>
                       <Grid item xs={6}>
-                        <Typography variant="body2">Sp. Def: {card.specialDefense}</Typography>
+                        <Typography className="card-text">Sp. Def: {card.specialDefense}</Typography>
                       </Grid>
                     </Grid>
+                  </Box>
+                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                    <IconButton onClick={() => handleEditClick(card._id)} color="primary">
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton onClick={() => handleDeleteClick(card)} color="error">
+                      <DeleteIcon />
+                    </IconButton>
                   </Box>
                 </CardContent>
               </Card>
@@ -215,11 +195,13 @@ function Gallery() {
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Card</DialogTitle>
         <DialogContent>
-          Are you sure you want to delete this card?
+          <Typography>Are you sure you want to delete this card?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error">Delete</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>
