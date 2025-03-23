@@ -38,17 +38,25 @@ function EditCard() {
 
   // Load card and designs data
   useEffect(() => {
+    console.log('EditCard mounted with ID:', id);
+    if (!id) {
+      console.error('No card ID provided in route');
+      navigate('/gallery');
+      return;
+    }
     const fetchData = async () => {
       try {
-        // Fetch card data
+        console.log('Fetching card data for ID:', id);
         const cardRes = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`);
         const cardData = cardRes.data;
+        console.log('Received card data:', cardData);
         
-        // Fetch designs
+        console.log('Fetching designs');
         const designsRes = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
+        console.log('Received designs:', designsRes.data);
         
         // Set the card data
-        setCard({
+        const cardState = {
           name: cardData.name || '',
           type: cardData.type || '',
           hp: cardData.hp?.toString() || '',
@@ -59,14 +67,18 @@ function EditCard() {
           speed: cardData.speed?.toString() || '',
           cardDesign: cardData.cardDesign?._id || '',
           image: null
-        });
+        };
+        console.log('Setting card state:', cardState);
+        setCard(cardState);
 
         // Set the designs
         setDesigns(designsRes.data);
 
         // Set image preview if exists
         if (cardData.image) {
-          setPreview(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${cardData.image}`);
+          const imageUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${cardData.image}`;
+          console.log('Setting image preview:', imageUrl);
+          setPreview(imageUrl);
         }
 
       } catch (error) {
@@ -76,18 +88,26 @@ function EditCard() {
       }
     };
 
-    if (id) {
-      fetchData();
-    }
+    fetchData();
   }, [id, navigate]);
+
+  // Add effect to log card state changes
+  useEffect(() => {
+    console.log('Card state updated:', card);
+  }, [card]);
 
   // Handle form field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setCard(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    console.log('Form field changed:', name, value);
+    setCard(prev => {
+      const newState = {
+        ...prev,
+        [name]: value
+      };
+      console.log('New card state:', newState);
+      return newState;
+    });
   };
 
   // Handle image change

@@ -200,12 +200,16 @@ app.get('/api/cards', async (req, res) => {
 // Get a single card by ID
 app.get('/api/cards/:id', async (req, res) => {
   try {
-    console.log('Fetching card:', req.params.id);
+    console.log('Fetching card with ID:', req.params.id);
     const card = await Card.findById(req.params.id).populate('cardDesign');
+    console.log('Found card:', card);
+    
     if (!card) {
+      console.log('Card not found');
       return res.status(404).json({ message: 'Card not found' });
     }
-    console.log('Found card:', card);
+    
+    console.log('Sending card data:', card);
     res.json(card);
   } catch (error) {
     console.error('Error fetching card:', error);
