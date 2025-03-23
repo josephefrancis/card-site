@@ -30,6 +30,7 @@ function CreateCard() {
   const [preview, setPreview] = useState(null);
   const [designs, setDesigns] = useState([]);
   const [selectedDesign, setSelectedDesign] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchDesigns();
@@ -38,9 +39,10 @@ function CreateCard() {
   const fetchDesigns = async () => {
     try {
       const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
-      setDesigns(response.data);
+      setDesigns(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching designs:', error);
+      setError('Failed to load card designs');
     }
   };
 
@@ -92,27 +94,33 @@ function CreateCard() {
       setSelectedDesign(null);
     } catch (error) {
       console.error('Error creating card:', error);
-      alert('Error creating card. Please try again.');
+      setError('Failed to create card');
     }
   };
 
   const getCardStyle = () => {
-    if (!selectedDesign) return {};
+    if (!selectedDesign?.styles) return {};
     
     const styles = selectedDesign.styles;
     return {
-      background: styles.gradientColors.length > 1
-        ? `linear-gradient(45deg, ${styles.gradientColors.join(', ')})`
-        : styles.background,
-      borderColor: styles.borderColor,
-      borderWidth: `${styles.borderWidth}px`,
-      borderStyle: styles.borderStyle,
-      borderRadius: `${styles.borderRadius}px`,
-      boxShadow: `0 0 ${styles.shadowBlur}px ${styles.shadowColor}`,
+      background: styles.background || '#ffffff',
+      border: `${styles.borderWidth || 2}px ${styles.borderStyle || 'solid'} ${styles.borderColor || '#000000'}`,
+      borderRadius: `${styles.borderRadius || 8}px`,
+      boxShadow: `0 0 ${styles.shadowBlur || 4}px ${styles.shadowColor || 'rgba(0,0,0,0.2)'}`,
       padding: '20px',
-      color: styles.textColor,
+      color: styles.textColor || '#000000',
     };
   };
+
+  if (error) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4 }}>
+        <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+          <Typography color="error">{error}</Typography>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
@@ -218,7 +226,7 @@ function CreateCard() {
                   label="Card Design"
                   required
                 >
-                  {designs.map((design) => (
+                  {Array.isArray(designs) && designs.map((design) => (
                     <MenuItem key={design._id} value={design._id}>
                       {design.name}
                     </MenuItem>
@@ -251,24 +259,6 @@ function CreateCard() {
                 </Box>
               )}
             </Grid>
-
-            {selectedDesign && (
-              <Grid item xs={12}>
-                <Paper elevation={2} sx={{ p: 3, ...getCardStyle() }}>
-                  <Typography variant="h5" sx={{ color: selectedDesign.styles.titleColor }}>
-                    Card Preview
-                  </Typography>
-                  <Box sx={{ mt: 2, bgcolor: selectedDesign.styles.statsBgColor, p: 2, borderRadius: '5px' }}>
-                    <Typography>Name: {formData.name || 'Your Card Name'}</Typography>
-                    <Typography>Type: {formData.type || 'Card Type'}</Typography>
-                    <Typography>HP: {formData.hp || '0'}</Typography>
-                    <Typography>Attack: {formData.attack || '0'}</Typography>
-                    <Typography>Defense: {formData.defense || '0'}</Typography>
-                  </Box>
-                </Paper>
-              </Grid>
-            )}
-
             <Grid item xs={12}>
               <Button
                 type="submit"
@@ -282,6 +272,44 @@ function CreateCard() {
             </Grid>
           </Grid>
         </form>
+
+        {selectedDesign && (
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Preview
+            </Typography>
+            <Paper elevation={3} sx={{ p: 3, ...getCardStyle() }}>
+              <Typography variant="h5" gutterBottom>
+                {formData.name || 'Card Name'}
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                Type: {formData.type || 'Type'}
+              </Typography>
+              <Box sx={{ mt: 2 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography>HP: {formData.hp || '0'}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography>Attack: {formData.attack || '0'}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography>Defense: {formData.defense || '0'}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography>Speed: {formData.speed || '0'}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography>Sp. Atk: {formData.specialAttack || '0'}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography>Sp. Def: {formData.specialDefense || '0'}</Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Paper>
+          </Box>
+        )}
       </Paper>
     </Container>
   );
