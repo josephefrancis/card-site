@@ -18,7 +18,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 function EditCard() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  
+  // Single state object for the form
+  const [card, setCard] = useState({
     name: '',
     type: '',
     hp: '',
@@ -28,147 +30,102 @@ function EditCard() {
     specialDefense: '',
     speed: '',
     cardDesign: '',
-    image: null,
+    image: null
   });
-  const [preview, setPreview] = useState(null);
+
   const [designs, setDesigns] = useState([]);
-  const [selectedDesign, setSelectedDesign] = useState(null);
-  const [currentImage, setCurrentImage] = useState(null);
+  const [preview, setPreview] = useState(null);
 
+  // Load card and designs data
   useEffect(() => {
-    console.log('EditCard mounted with ID:', id);
-    if (!id) {
-      console.error('No card ID provided in route');
-      navigate('/gallery');
-      return;
-    }
-    const loadData = async () => {
+    const fetchData = async () => {
       try {
-        const [designsResponse, cardResponse] = await Promise.all([
-          axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`),
-          axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`)
-        ]);
+        // Fetch card data
+        const cardRes = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`);
+        const cardData = cardRes.data;
+        
+        // Fetch designs
+        const designsRes = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/card-designs`);
+        
+        // Set the card data
+        setCard({
+          name: cardData.name || '',
+          type: cardData.type || '',
+          hp: cardData.hp?.toString() || '',
+          attack: cardData.attack?.toString() || '',
+          defense: cardData.defense?.toString() || '',
+          specialAttack: cardData.specialAttack?.toString() || '',
+          specialDefense: cardData.specialDefense?.toString() || '',
+          speed: cardData.speed?.toString() || '',
+          cardDesign: cardData.cardDesign?._id || '',
+          image: null
+        });
 
-        const card = cardResponse.data;
-        console.log('Fetched card data:', card);
+        // Set the designs
+        setDesigns(designsRes.data);
 
-        // Set form data with proper type conversion for numbers
-        const formDataToSet = {
-          name: card.name || '',
-          type: card.type || '',
-          hp: card.hp?.toString() || '',
-          attack: card.attack?.toString() || '',
-          defense: card.defense?.toString() || '',
-          specialAttack: card.specialAttack?.toString() || '',
-          specialDefense: card.specialDefense?.toString() || '',
-          speed: card.speed?.toString() || '',
-          cardDesign: card.cardDesign?._id || '',
-          image: null,
-        };
-        console.log('Setting form data:', formDataToSet);
-        setFormData(formDataToSet);
-
-        // Set current image and preview if image exists
-        if (card.image) {
-          setCurrentImage(card.image);
-          const imageUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${card.image}`;
-          console.log('Setting image preview:', imageUrl);
-          setPreview(imageUrl);
+        // Set image preview if exists
+        if (cardData.image) {
+          setPreview(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/files/${cardData.image}`);
         }
 
-        // Set selected design if it exists
-        if (card.cardDesign) {
-          console.log('Setting selected design:', card.cardDesign);
-          setSelectedDesign(card.cardDesign);
-        }
-
-        // Set designs
-        console.log('Fetched designs:', designsResponse.data);
-        setDesigns(designsResponse.data);
       } catch (error) {
-        console.error('Error loading data:', error);
-        alert('Error loading card details. Please try again.');
+        console.error('Error fetching data:', error);
+        alert('Error loading card data');
         navigate('/gallery');
       }
     };
 
-    loadData();
-  }, [id]);
+    if (id) {
+      fetchData();
+    }
+  }, [id, navigate]);
 
+  // Handle form field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log('Form field changed:', name, value);
-    
-    // Update the form field directly
-    e.target.value = value;
-    
-    setFormData((prev) => {
-      const newData = {
-        ...prev,
-        [name]: value,
-      };
-      console.log('New form data:', newData);
-      return newData;
-    });
+    setCard(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-    if (name === 'cardDesign') {
-      console.log('Card design changed to:', value);
-      const design = designs.find(d => d._id === value);
-      console.log('Found design:', design);
-      setSelectedDesign(design);
+  // Handle image change
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCard(prev => ({
+        ...prev,
+        image: file
+      }));
+      setPreview(URL.createObjectURL(file));
     }
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setFormData((prev) => ({
-      ...prev,
-      image: file,
-    }));
-    setPreview(URL.createObjectURL(file));
-  };
-
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const formDataToSend = new FormData();
-    Object.keys(formData).forEach((key) => {
-      if (key === 'image' && !formData[key]) {
-        // If no new image is selected, keep the current image
-        return;
-      }
-      formDataToSend.append(key, formData[key]);
+    
+    const formData = new FormData();
+    Object.keys(card).forEach(key => {
+      if (key === 'image' && !card[key]) return;
+      formData.append(key, card[key]);
     });
 
     try {
-      await axios.put(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      await axios.put(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cards/${id}`,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
+      );
       alert('Card updated successfully!');
       navigate('/gallery');
     } catch (error) {
       console.error('Error updating card:', error);
-      alert('Error updating card. Please try again.');
+      alert('Error updating card');
     }
-  };
-
-  const getCardStyle = () => {
-    if (!selectedDesign?.styles) return {};
-    
-    const styles = selectedDesign.styles;
-    return {
-      background: styles.gradientColors?.length > 1
-        ? `linear-gradient(45deg, ${styles.gradientColors.join(', ')})`
-        : styles.background || '#ffffff',
-      borderColor: styles.borderColor || '#000000',
-      borderWidth: `${styles.borderWidth || 2}px`,
-      borderStyle: styles.borderStyle || 'solid',
-      borderRadius: `${styles.borderRadius || 8}px`,
-      boxShadow: `0 0 ${styles.shadowBlur || 4}px ${styles.shadowColor || 'rgba(0,0,0,0.2)'}`,
-      padding: '20px',
-      color: styles.textColor || '#000000',
-    };
   };
 
   return (
@@ -184,7 +141,7 @@ function EditCard() {
                 fullWidth
                 label="Name"
                 name="name"
-                defaultValue={formData.name}
+                value={card.name}
                 onChange={handleChange}
                 required
               />
@@ -194,7 +151,7 @@ function EditCard() {
                 fullWidth
                 label="Type"
                 name="type"
-                defaultValue={formData.type}
+                value={card.type}
                 onChange={handleChange}
                 required
               />
@@ -205,7 +162,7 @@ function EditCard() {
                 type="number"
                 label="HP"
                 name="hp"
-                defaultValue={formData.hp}
+                value={card.hp}
                 onChange={handleChange}
                 required
               />
@@ -216,7 +173,7 @@ function EditCard() {
                 type="number"
                 label="Attack"
                 name="attack"
-                defaultValue={formData.attack}
+                value={card.attack}
                 onChange={handleChange}
                 required
               />
@@ -227,7 +184,7 @@ function EditCard() {
                 type="number"
                 label="Defense"
                 name="defense"
-                defaultValue={formData.defense}
+                value={card.defense}
                 onChange={handleChange}
                 required
               />
@@ -238,7 +195,7 @@ function EditCard() {
                 type="number"
                 label="Special Attack"
                 name="specialAttack"
-                defaultValue={formData.specialAttack}
+                value={card.specialAttack}
                 onChange={handleChange}
                 required
               />
@@ -249,7 +206,7 @@ function EditCard() {
                 type="number"
                 label="Special Defense"
                 name="specialDefense"
-                defaultValue={formData.specialDefense}
+                value={card.specialDefense}
                 onChange={handleChange}
                 required
               />
@@ -260,7 +217,7 @@ function EditCard() {
                 type="number"
                 label="Speed"
                 name="speed"
-                defaultValue={formData.speed}
+                value={card.speed}
                 onChange={handleChange}
                 required
               />
@@ -270,7 +227,7 @@ function EditCard() {
                 <InputLabel>Card Design</InputLabel>
                 <Select
                   name="cardDesign"
-                  defaultValue={formData.cardDesign}
+                  value={card.cardDesign}
                   onChange={handleChange}
                   label="Card Design"
                   required
@@ -308,24 +265,6 @@ function EditCard() {
                 </Box>
               )}
             </Grid>
-
-            {selectedDesign && (
-              <Grid item xs={12}>
-                <Paper elevation={2} sx={{ p: 3, ...getCardStyle() }}>
-                  <Typography variant="h5" sx={{ color: selectedDesign.styles.titleColor }}>
-                    Card Preview
-                  </Typography>
-                  <Box sx={{ mt: 2, bgcolor: selectedDesign.styles.statsBgColor, p: 2, borderRadius: '5px' }}>
-                    <Typography>Name: {formData.name || 'Your Card Name'}</Typography>
-                    <Typography>Type: {formData.type || 'Card Type'}</Typography>
-                    <Typography>HP: {formData.hp || '0'}</Typography>
-                    <Typography>Attack: {formData.attack || '0'}</Typography>
-                    <Typography>Defense: {formData.defense || '0'}</Typography>
-                  </Box>
-                </Paper>
-              </Grid>
-            )}
-
             <Grid item xs={12}>
               <Button
                 type="submit"
