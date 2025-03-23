@@ -109,58 +109,7 @@ const storage = new GridFsStorage({
 
 const upload = multer({ storage });
 
-// MongoDB Connection
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => {
-  console.log('Connected to MongoDB');
-  
-  // Initialize GridFS
-  const conn = mongoose.connection;
-  gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
-    bucketName: 'uploads'
-  });
-  gfs = Grid(conn.db, mongoose.mongo);
-  gfs.collection('uploads');
-
-  // Start server after successful connection
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-  });
-})
-.catch((err) => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
-});
-
-// Serve static files from React build directory in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
-  
-  // Handle React routing, return all requests to React app
-  app.get('*', function(req, res) {
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
-  });
-}
-
-// Serve files from GridFS
-app.get('/api/files/:filename', async (req, res) => {
-  try {
-    const file = await gfs.files.findOne({ filename: req.params.filename });
-    if (!file) {
-      return res.status(404).json({ message: 'File not found' });
-    }
-    const downloadStream = gridfsBucket.openDownloadStream(file._id);
-    res.set('Content-Type', file.contentType);
-    downloadStream.pipe(res);
-  } catch (error) {
-    console.error('Error serving file:', error);
-    res.status(500).json({ message: 'Error serving file' });
-  }
-});
-
+// API Routes
 // Card Design Routes
 app.post('/api/card-designs', async (req, res) => {
   try {
@@ -180,6 +129,7 @@ app.get('/api/card-designs', async (req, res) => {
     console.log('Fetching all card designs');
     const designs = await CardDesign.find().sort({ createdAt: -1 });
     console.log('Found designs:', designs.length);
+    console.log('Designs:', JSON.stringify(designs, null, 2));
     res.json(designs);
   } catch (error) {
     console.error('Error fetching card designs:', error);
@@ -239,6 +189,7 @@ app.get('/api/cards', async (req, res) => {
     console.log('Fetching all cards');
     const cards = await Card.find().populate('cardDesign').sort({ createdAt: -1 });
     console.log('Found cards:', cards.length);
+    console.log('Cards:', JSON.stringify(cards, null, 2));
     res.json(cards);
   } catch (error) {
     console.error('Error fetching cards:', error);
@@ -294,4 +245,56 @@ app.put('/api/cards/:id', upload.single('image'), async (req, res) => {
     console.error('Error updating card:', error);
     res.status(500).json({ message: 'Error updating card' });
   }
-}); 
+});
+
+// Serve files from GridFS
+app.get('/api/files/:filename', async (req, res) => {
+  try {
+    const file = await gfs.files.findOne({ filename: req.params.filename });
+    if (!file) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+    const downloadStream = gridfsBucket.openDownloadStream(file._id);
+    res.set('Content-Type', file.contentType);
+    downloadStream.pipe(res);
+  } catch (error) {
+    console.error('Error serving file:', error);
+    res.status(500).json({ message: 'Error serving file' });
+  }
+});
+
+// MongoDB Connection
+mongoose.connect(mongoURI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => {
+  console.log('Connected to MongoDB');
+  
+  // Initialize GridFS
+  const conn = mongoose.connection;
+  gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
+    bucketName: 'uploads'
+  });
+  gfs = Grid(conn.db, mongoose.mongo);
+  gfs.collection('uploads');
+
+  // Start server after successful connection
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+})
+.catch((err) => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1);
+});
+
+// Serve static files from React build directory in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/build')));
+  
+  // Handle React routing, return all requests to React app
+  app.get('*', function(req, res) {
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+  });
+} 
