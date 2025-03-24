@@ -37,6 +37,50 @@ const mongoURI = process.env.MONGODB_URI;
 let gfs;
 let gridfsBucket;
 
+// Initialize MongoDB connection and GridFS
+const initializeMongoDB = async () => {
+  try {
+    console.log('Attempting to connect to MongoDB...');
+    await mongoose.connect(mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000
+    });
+    console.log('Connected to MongoDB successfully');
+
+    // Initialize GridFS
+    const conn = mongoose.connection;
+    gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
+      bucketName: 'uploads'
+    });
+    gfs = Grid(conn.db, mongoose.mongo);
+    gfs.collection('uploads');
+    console.log('GridFS initialized successfully');
+
+    // Start server after successful connection
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (err) {
+    console.error('Failed to initialize MongoDB:', err);
+    console.error('MongoDB connection error:', err.message);
+    process.exit(1);
+  }
+};
+
+// Handle MongoDB connection errors after initial connection
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+// Initialize MongoDB before defining routes
+initializeMongoDB();
+
 // Card Design Schema
 const cardDesignSchema = new mongoose.Schema({
   name: {
@@ -245,25 +289,49 @@ app.get('/api/cards/:id', async (req, res) => {
   }
 });
 
+// Delete a card
 app.delete('/api/cards/:id', async (req, res) => {
   try {
+    console.log('Attempting to delete card with ID:', req.params.id);
+    
+    // First find the card to get its image ID
     const card = await Card.findById(req.params.id);
     if (!card) {
+      console.log('Card not found for deletion:', req.params.id);
       return res.status(404).json({ message: 'Card not found' });
     }
-
-    // Delete the image from GridFS if it exists
+    
+    console.log('Found card to delete:', JSON.stringify(card, null, 2));
+    
+    // Delete the card from the database
+    await Card.findByIdAndDelete(req.params.id);
+    console.log('Card deleted from database');
+    
+    // If the card has an image, delete it from GridFS
     if (card.image) {
-      const file = await gfs.files.findOne({ filename: card.image });
-      if (file) {
-        await gridfsBucket.delete(file._id);
+      try {
+        console.log('Attempting to delete image:', card.image);
+        // Check if the image ID is a valid MongoDB ObjectId
+        if (mongoose.Types.ObjectId.isValid(card.image)) {
+          await gridfsBucket.delete(new mongoose.Types.ObjectId(card.image));
+          console.log('Image deleted successfully');
+        } else {
+          console.log('Invalid image ID format, skipping image deletion');
+        }
+      } catch (imageError) {
+        console.error('Error deleting image:', imageError);
+        // Don't throw here - we still want to return success for the card deletion
       }
     }
-
-    await card.remove();
+    
     res.json({ message: 'Card deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error deleting card:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Error deleting card',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -320,50 +388,6 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
-
-// Initialize MongoDB connection and start server
-const initializeServer = async () => {
-  try {
-    console.log('Attempting to connect to MongoDB...');
-    await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000 // Timeout after 5s instead of 30s
-    });
-    console.log('Connected to MongoDB successfully');
-
-    // Initialize GridFS
-    const conn = mongoose.connection;
-    gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
-      bucketName: 'uploads'
-    });
-    gfs = Grid(conn.db, mongoose.mongo);
-    gfs.collection('uploads');
-    console.log('GridFS initialized successfully');
-
-    // Start server after successful connection
-    app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
-  } catch (err) {
-    console.error('Failed to initialize server:', err);
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);
-  }
-};
-
-// Handle MongoDB connection errors after initial connection
-mongoose.connection.on('error', err => {
-  console.error('MongoDB connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
-});
-
-// Initialize the server
-initializeServer();
 
 // Serve static files from React build directory in production
 if (process.env.NODE_ENV === 'production') {
